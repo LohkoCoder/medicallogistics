@@ -1,0 +1,26 @@
+{
+  "name": "medicallogistics",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^13.13.4",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.8.3",
+    "web3": "^1.2.7"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZJJ-XYH/medicallogistics.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ZJJ-XYH/medicallogistics/issues"
+  },
+  "homepage": "https://github.com/ZJJ-XYH/medicallogistics#readme"
+}
