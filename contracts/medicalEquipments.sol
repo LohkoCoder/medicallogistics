@@ -1,36 +1,117 @@
 pragma solidity >=0.4.25 <0.5.3;
 
-contract medicalEquipment {
+
+contract Owned {
+
+    address public owner;
     
-    address Owner;
+    constructor() public {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
+
+    function setOwner(address _newOwner) onlyOwner public{
+        owner = _newOwner;
+    }
+}
+
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that throw on error
+ */
+library SafeMath {
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a * b;
+    assert(a == 0 || c / a == b);
+    return c;
+  }
+
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
+    // assert(b > 0); // Solidity automatically throws when dividing by 0
+    uint256 c = a / b;
+    // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+    return c;
+  }
+
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+    assert(b <= a);
+    return a - b;
+  }
+
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
+    uint256 c = a + b;
+    assert(c >= a);
+    return c;
+  }
+
+  function toUINT112(uint256 a) internal pure returns(uint112) {
+    assert(uint112(a) == a);
+    return uint112(a);
+  }
+
+  function toUINT120(uint256 a) internal pure returns(uint120) {
+    assert(uint120(a) == a);
+    return uint120(a);
+  }
+
+  function toUINT128(uint256 a) internal pure returns(uint128) {
+    assert(uint128(a) == a);
+    return uint128(a);
+  }
+}
+
+
+contract medicalEquipment is Owned{
     
+
     enum medicalEquipmentStatus {
         /// 出厂
         deliveredatM,
+        
+        /// 物流1收货
+        pickedByS1,
+        /// 物流1发货
+        deliveredAtS1,
+        
         /// 经销商收货
-        picked4D,
+        pickedByD,
         /// 经销商发货
-        deliveredatD,
+        deliveredAtD,
+
+        /// 物流2收货
+        pickedByS2,
+        /// 物流2发货
+        deliveredAtS2,
+
         /// 外贸商收货
-        picked4T,
+        pickedByT,
         /// 外贸商发货
-        deliveredatT,
+        deliveredAtT,
+        
+        /// 物流3收货
+        pickedByS3,
+        /// 物流3发货
+        deliveredAtS3,
+        
         /// 海关查货
-        picked4C,
-        /// 海关发货
-        deliveredatC,
+        checkedByC,
+        
         /// 国外客户收货
-        picked4F
+        pickedByF
     }
     
     event ShippmentUpdate(
-        address indexed BatchID,
-        address indexed Shipper,
-        address indexed Receiver,
+        bytes32 indexed BatchID,
+        address indexed From,
+        address indexed To,
         uint Status
     );
 
-    
+    bytes32 BatchID;
     // 信息描述
     bytes32 description;
     /// @notice
@@ -53,216 +134,175 @@ contract medicalEquipment {
     /// @notice
     medicalEquipmentStatus status;
 
-    constructor(
-        address Manufacturer, /// 生产商
-        address Shipper1, 
-        address Distributer, // 经销商
-        address Shipper2,
-        address TradingCom, // 外贸公司 
-        address Shipper3,
-        address Custom, // 海关 
-        address ForeignCustomer  // 国外客户
-        ) public {
-        Owner = manufacturer;
-        manufacturer = Manufacturer;
-        shipper1 = Shipper1;
-        distributer = Distributer;
-        shipper2 = Shipper2;
-        fTradingCom = TradingCom;
-        shipper3 = Shipper3;
-        custom = Custom;
-        fCustomer = ForeignCustomer;
-        status = medicalEquipmentStatus(0);
+    function registerMan(address _manufacturer) onlyOwner public{
+        manufacturer = _manufacturer;
+    }
+
+    function registerShipper1(address _shipper1) onlyOwner public{
+        shipper1 = _shipper1;
     }
     
-    /// @notice
-    /// @dev Pick Equipment Batch by Associate Transporter
-    /// @param shpr Transporter Ethereum Network Address
-    function pickPackagea1(
-        address shpr
-    ) public {
+    function registerDistributer(address _distributer) onlyOwner public{
+        distributer = _distributer;
+    }
+    
+    function registerShipper2(address _shipper2) onlyOwner public{
+        shipper2 = _shipper2;
+    }
+    
+    function registerFTradingCom(address _tradingCom) onlyOwner public{
+        fTradingCom = _tradingCom;
+    }
+    
+    function registerShipper3(address _shipper3) onlyOwner public{
+        shipper3 = _shipper3;
+    }
+    
+    function registerCustom(address _custom) onlyOwner public{
+        custom = _custom;
+    }
+    
+    function registerFCustomer(address _foreignCustomer) onlyOwner public{
+        fCustomer = _foreignCustomer;
+    }
+
+    
+    function deliverByMan(bytes32 _batchID) public returns (bool){
         require(
-            shpr == shipper1,
+            msg.sender == manufacturer,
+            "Only Associate manufacturer can call this function");
+        BatchID = _batchID;
+        if (shipper1 == address(0x0)) {
+            return false;
+        }
+        
+        status = medicalEquipmentStatus(0);
+        emit ShippmentUpdate(_batchID, manufacturer, shipper1, 1);
+        return true;
+    }
+
+    function pickPackageByS1() public returns (bool){
+        require(
+            msg.sender == shipper1,
             "Only Associate Shipper can call this function"
         );
         require(
             status == medicalEquipmentStatus(0),
-            "Package must be at Manufacturer."
+            "Package must be delivered by Manufacturer."
         );
 
         status = medicalEquipmentStatus(1);
-        emit ShippmentUpdate(address(this),shipper1,distributer,1);
-        
+        emit ShippmentUpdate(BatchID,manufacturer,distributer,1);
+        return true;        
     }
     
-    /// @notice
-    /// @dev Received Equipment Batch by Associated Wholesaler or Distributer
-    /// @param Rcvr
-    function distributerReceivedPackage(
-        address Rcvr
-    ) public
-    returns(uint rcvtype)
-    {
-
+    function deliverPackageByS1() public returns (bool) {
         require(
-            Rcvr == distributer,
-            "Only distributer can call this function"
-        );
-
-        require(
-            uint(status) = 1,
-            "Product not picked up yet"
-        );
-
-        status = medicalEquipmentStatus(2);
-        emit ShippmentUpdate(address(this),shipper1,distributer,2);
-        return 1;
-
-    }
-    
-    /// @notice
-    /// @dev Pick Equipment Batch by Associate Transporter
-    /// @param shpr Transporter Ethereum Network Address
-    function pickPackagea2(
-        address shpr
-    ) public {
-        require(
-            shpr == shipper2,
+            msg.sender == shipper1,
             "Only Associate Shipper can call this function"
         );
         require(
-            uint(status) = 2,
-            "Package must be at Distributer."
+            status == medicalEquipmentStatus(1),
+            "Package must be picked by Associate Shipper"
         );
-
-        status = medicalEquipmentStatus(3);
-        emit ShippmentUpdate(address(this),shipper2,fTradingCom,3);
-        
-    }
-    
-        
-    /// @notice
-    /// @dev Received Equipment Batch by Associated Wholesaler or Distributer
-    /// @param Rcvr
-    function fTradingComReceivedPackage(
-        address Rcvr
-    ) public
-    returns(uint rcvtype)
-    {
-
-        require(
-            Rcvr == fTradingCom,
-            "Only foreign trading company can call this function"
-        );
-
-        require(
-            uint(status) = 3,
-            "Product not picked up yet"
-        );
-        
-        status = medicalEquipmentStatus(4);
-        emit ShippmentUpdate(address(this),shipper2,fTradingCom,4);
-
-
-    }
-    
-    /// @notice
-    /// @dev Pick Equipment Batch by Associate Transporter
-    /// @param shpr Transporter Ethereum Network Address
-    function pickPackagea3(
-        address shpr
-    ) public {
-        require(
-            shpr == shipper3,
-            "Only Associate Shipper can call this function"
-        );
-        require(
-            uint(status) = 4,
-            "Package must be at foreign trading company."
-        );
-
-        status = medicalEquipmentStatus(5);
-        emit ShippmentUpdate(address(this),shipper3,custom,5);
-        
-    }
-
-
-    /// @notice
-    /// @dev Received Equipment Batch by custom
-    /// @param Rcvr
-    function customReceivedPackage(
-        address Rcvr
-    ) public
-    returns(uint rcvtype)
-    {
-
-        require(
-            Rcvr == custom,
-            "Only custom can call this function"
-        );
-
-        require(
-            uint(status) = 5,
-            "Product not picked up yet"
-        );
-        
-        status = medicalEquipmentStatus(6);
-        emit ShippmentUpdate(address(this),shipper3,custom,6);
-
-    }
-    
-    /// @notice
-    /// @dev Deliver Equipment Batch by custom
-    /// @param shpr Transporter Ethereum Network Address
-    /// 注意：这一步不需要重新
-    function customDeliverPackage(
-        address Custom,
-        bool authorized
-    ) public {
-        require(
-            Custom == custom,
-            "Only custom can call this function"
-        );
-        require(
-            uint(status) = 6,
-            "Package must be at custom."
-        );
-
-        status = medicalEquipmentStatus(7);
-        
-        if(authorized) {
-            emit ShippmentUpdate(address(this),custom,fCustomer,7);
-            quantity = 1;
-            description = "products can be exported";
-        } else { /// 产品不合格就退还给退还给物流公司
-            emit ShippmentUpdate(address(this),custom,shipper3,7);
-            quantity = 0;
-            description = "products cannot be exported";
+        if (distributer == address(0x0)) {
+            return false;
         }
-        
+        status = medicalEquipmentStatus(2);
+        emit ShippmentUpdate(BatchID,shipper1,distributer,2);
     }
     
-    /// @notice
-    /// @dev Received Equipment Batch by Associated Wholesaler or Distributer
-    /// @param Rcvr
-    function fCustomerReceivedPackage(
-        address Rcvr
-    ) public
-    returns(uint rcvtype)
-    {
-
+    function pickedByDistributer() public returns (bool) {
         require(
-            Rcvr == fCustomer,
+            msg.sender == distributer,
+            "Only Associate distributer can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(2),
+            "Package must be picked by distributer"
+        );
+        status = medicalEquipmentStatus(3);
+        emit ShippmentUpdate(BatchID,shipper1,distributer,3);
+    }
+    
+    function deliveredByDistributer() public returns (bool) {
+        require(
+            msg.sender == distributer,
+            "Only Associate distributer can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(3),
+            "Package must be picked by distributer"
+        );
+        if (fTradingCom == address(0x0)) {
+            return false;
+        }
+        status = medicalEquipmentStatus(4);
+        emit ShippmentUpdate(BatchID,distributer,fTradingCom,4);
+    }
+    
+    function pickedByFTradingCom() public returns (bool) {
+        require(
+            msg.sender == fTradingCom,
+            "Only Associate foreign trading company can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(4),
+            "Package must be delivered by distributer"
+        );
+        if (fTradingCom == address(0x0)) {
+            return false;
+        }
+        status = medicalEquipmentStatus(5);
+        emit ShippmentUpdate(BatchID,distributer,fTradingCom,5);
+        return true;
+    }
+    
+    function deliveredByFTradingCom() public returns (bool) {
+        require(
+            msg.sender == fTradingCom,
+            "Only Associate foreign trading company can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(5),
+            "Package must be picked by foreign trading company"
+        );
+        if(custom == address(0x0)) {
+            return false;
+        }
+        status = medicalEquipmentStatus(6);
+        emit ShippmentUpdate(BatchID,fTradingCom,custom,6);
+        return true;
+    }
+    
+    function checkedByCustom() public returns (bool) {
+        require(
+            msg.sender == custom,
+            "Only custom can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(6),
+            "Package must be delivered by foreign trading company"
+        );
+        if(fCustomer == address(0x0)) {
+            return false;
+        }
+        status = medicalEquipmentStatus(7);
+        emit ShippmentUpdate(BatchID,custom,fCustomer,7);
+        return true;
+    }
+    
+    function pickedByFCustomer() public returns (bool){
+        require(
+            msg.sender == fCustomer,
             "Only foreign customer can call this function"
         );
-
         require(
-            uint(status) = 7,
-            "Product not picked up yet"
+            status == medicalEquipmentStatus(7),
+            "Package must be checked by custom"
         );
-
         status = medicalEquipmentStatus(8);
-        emit ShippmentUpdate(address(this),custom,fCustomer,8);
+        emit ShippmentUpdate(BatchID,custom,fCustomer,8);
+        return true;
     }
-    
 }
