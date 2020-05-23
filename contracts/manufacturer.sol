@@ -1,5 +1,5 @@
 pragma solidity >=0.4.25 <0.5.3;
-import "./medicalEquipment";
+import "./medicalEquipment.sol";
 
 contract Owned {
 

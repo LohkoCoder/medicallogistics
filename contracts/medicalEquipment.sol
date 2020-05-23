@@ -167,7 +167,7 @@ contract medicalEquipment is Owned{
     }
 
     
-    function deliverByMan(bytes32 _batchID) public returns (bool){
+    function deliveredByMan(bytes32 _batchID) public returns (bool){
         require(
             msg.sender == manufacturer,
             "Only Associate manufacturer can call this function");
@@ -175,13 +175,13 @@ contract medicalEquipment is Owned{
         if (shipper1 == address(0x0)) {
             return false;
         }
-        
+
         status = medicalEquipmentStatus(0);
-        emit ShippmentUpdate(_batchID, manufacturer, shipper1, 1);
+        emit ShippmentUpdate(_batchID, manufacturer, shipper1, 0);
         return true;
     }
 
-    function pickPackageByS1() public returns (bool){
+    function pickedByS1() public returns (bool){
         require(
             msg.sender == shipper1,
             "Only Associate Shipper can call this function"
@@ -196,7 +196,7 @@ contract medicalEquipment is Owned{
         return true;        
     }
     
-    function deliverPackageByS1() public returns (bool) {
+    function deliveredByS1() public returns (bool) {
         require(
             msg.sender == shipper1,
             "Only Associate Shipper can call this function"
@@ -241,20 +241,52 @@ contract medicalEquipment is Owned{
         emit ShippmentUpdate(BatchID,distributer,fTradingCom,4);
     }
     
+    function pickedByS2() public returns (bool){
+        require(
+            msg.sender == shipper2,
+            "Only Associate Shipper can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(4),
+            "Package must be delivered by Distributer."
+        );
+    
+        status = medicalEquipmentStatus(5);
+        emit ShippmentUpdate(BatchID,distributer,shipper2,5);
+        return true;        
+    }
+    
+    function deliveredByS2() public returns (bool) {
+        require(
+            msg.sender == shipper2,
+            "Only Associate Shipper can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(5),
+            "Package must be picked by Associate Shipper"
+        );
+        if (fTradingCom == address(0x0)) {
+            return false;
+        }
+        status = medicalEquipmentStatus(6);
+        emit ShippmentUpdate(BatchID,shipper2,fTradingCom,6);
+    }
+    
+    
     function pickedByFTradingCom() public returns (bool) {
         require(
             msg.sender == fTradingCom,
             "Only Associate foreign trading company can call this function"
         );
         require(
-            status == medicalEquipmentStatus(4),
-            "Package must be delivered by distributer"
+            status == medicalEquipmentStatus(6),
+            "Package must be delivered by Associate shipper"
         );
         if (fTradingCom == address(0x0)) {
             return false;
         }
-        status = medicalEquipmentStatus(5);
-        emit ShippmentUpdate(BatchID,distributer,fTradingCom,5);
+        status = medicalEquipmentStatus(7);
+        emit ShippmentUpdate(BatchID,distributer,fTradingCom,7);
         return true;
     }
     
@@ -264,16 +296,49 @@ contract medicalEquipment is Owned{
             "Only Associate foreign trading company can call this function"
         );
         require(
-            status == medicalEquipmentStatus(5),
+            status == medicalEquipmentStatus(7),
             "Package must be picked by foreign trading company"
         );
         if(custom == address(0x0)) {
             return false;
         }
-        status = medicalEquipmentStatus(6);
-        emit ShippmentUpdate(BatchID,fTradingCom,custom,6);
+        status = medicalEquipmentStatus(8);
+        emit ShippmentUpdate(BatchID,fTradingCom,custom,8);
         return true;
     }
+    
+    function pickedByS3() public returns (bool){
+        require(
+            msg.sender == shipper3,
+            "Only Associate Shipper can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(8),
+            "Package must be delivered by foreign trading company."
+        );
+    
+        status = medicalEquipmentStatus(9);
+        emit ShippmentUpdate(BatchID,fTradingCom,shipper3,9);
+        return true;        
+    }
+    
+    
+    function deliveredByS3() public returns (bool) {
+        require(
+            msg.sender == shipper3,
+            "Only Associate Shipper can call this function"
+        );
+        require(
+            status == medicalEquipmentStatus(9),
+            "Package must be picked by Associate Shipper"
+        );
+        if (custom == address(0x0)) {
+            return false;
+        }
+        status = medicalEquipmentStatus(10);
+        emit ShippmentUpdate(BatchID,shipper3,custom,10);
+    }
+    
     
     function checkedByCustom() public returns (bool) {
         require(
@@ -281,14 +346,14 @@ contract medicalEquipment is Owned{
             "Only custom can call this function"
         );
         require(
-            status == medicalEquipmentStatus(6),
-            "Package must be delivered by foreign trading company"
+            status == medicalEquipmentStatus(10),
+            "Package must be delivered by Associate shipper"
         );
         if(fCustomer == address(0x0)) {
             return false;
         }
-        status = medicalEquipmentStatus(7);
-        emit ShippmentUpdate(BatchID,custom,fCustomer,7);
+        status = medicalEquipmentStatus(11);
+        emit ShippmentUpdate(BatchID,custom,fCustomer,11);
         return true;
     }
     
@@ -298,11 +363,11 @@ contract medicalEquipment is Owned{
             "Only foreign customer can call this function"
         );
         require(
-            status == medicalEquipmentStatus(7),
+            status == medicalEquipmentStatus(11),
             "Package must be checked by custom"
         );
-        status = medicalEquipmentStatus(8);
-        emit ShippmentUpdate(BatchID,custom,fCustomer,8);
+        status = medicalEquipmentStatus(12);
+        emit ShippmentUpdate(BatchID,custom,fCustomer,12);
         return true;
     }
 }
